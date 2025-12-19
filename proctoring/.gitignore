@@ -1,0 +1,50 @@
+# OS Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+temp/
+tmp/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# ML Models (large files)
+*.pt
+!.gitkeep
+.claude/

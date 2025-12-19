@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "proctoring-backend"
+version = "0.1.0"
+description = "AI-Powered Proctoring System Backend"
+authors = ["MSA30 Team"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+websockets = "^13.1"
+opencv-python = "4.10.0.84"
+mediapipe = "^0.10.21"
+ultralytics = "8.2.57"
+numpy = "^1.26.4"
+pillow = "^10.4.0"
+pydantic = "^2.9.2"
+sqlalchemy = "^2.0.35"
+python-multipart = "^0.0.12"
+aiofiles = "^24.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.0.0"
+isort = "^5.13.0"
+mypy = "^1.11.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

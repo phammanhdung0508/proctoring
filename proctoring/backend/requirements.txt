@@ -1,0 +1,19 @@
+# Core FastAPI and async dependencies
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+websockets==13.1
+python-multipart==0.0.12
+aiofiles==24.1.0
+
+# Computer Vision and ML
+opencv-python==4.10.0.84
+mediapipe==0.10.21
+ultralytics==8.2.57
+numpy==1.26.4
+
+# Database
+sqlalchemy==2.0.35
+pydantic==2.9.2
+
+# Image processing
+Pillow==10.4.0
