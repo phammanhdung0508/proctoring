@@ -106,10 +106,10 @@ async def shutdown_event():
 # Include routers
 app.include_router(websocket.router, tags=["websocket"])
 
-# TODO: Add additional routers
-# from app.api import sessions, reports
-# app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
-# app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+# Add additional routers
+from app.api import sessions, reports
+app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
 
 if __name__ == "__main__":
