@@ -138,8 +138,11 @@ class DetectionPipeline:
         # Phase 1 Optimization: Adaptive Frame Sampling
         # Skip frames with low motion to reduce processing load
         if self.enable_adaptive_sampling:
+            # Get last processing latency
+            last_latency = self._processing_times[-1] if self._processing_times else 0.0
+            
             should_process, sampling_info = self.frame_sampler.should_process_frame(
-                frame, timestamp
+                frame, timestamp, last_latency
             )
             if not should_process:
                 self._skipped_frames += 1

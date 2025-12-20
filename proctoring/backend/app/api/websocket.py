@@ -102,17 +102,31 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
         while True:
             # Receive message from client
-            try:
-                # Try to receive JSON first
-                data = await websocket.receive_json()
-
-                # Handle different message types
-                if data.get("type") == "frame":
-                    # Process frame
-                    result = await process_frame_message(data, session_id)
-
-                    if result:
-                        frames_processed += 1
+            message = await websocket.receive()
+            
+            if message["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect
+                
+            if "bytes" in message and message["bytes"]:
+                # FAST PATH: Handle binary frame directly
+                # This avoids Base64 decoding overhead
+                frame_bytes = message["bytes"]
+                frames_processed += 1
+                
+                # Use current server time for binary frames
+                # or we could prepend 8 bytes of timestamp if needed
+                timestamp = time.time()
+                
+                # Process binary frame
+                # We reuse the logic but skip base64 decode
+                nparr = np.frombuffer(frame_bytes, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if frame is not None:
+                    # Process frame through detection pipeline
+                    results = await pipeline.process_frame(frame, session_id, timestamp)
+                    
+                    if results:
                         # Update session metadata
                         manager.update_session_metadata(
                             session_id, {"frames_processed": frames_processed}
@@ -122,74 +136,71 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                         response = {
                             "type": "analysis",
                             "session_id": session_id,
-                            **result,
+                            **results,
                         }
-                        print(f"[WS-SEND] Sending analysis to {session_id[:8]}... (risk: {result.get('risk', {}).get('risk_score', 0):.1f})")
-                        sent = await manager.send_message(session_id, response)
-                        if not sent:
-                            print(f"[WS-ERROR] Failed to send message to {session_id[:8]}...")
-
-                elif data.get("type") == "ping":
-                    # Respond to ping
-                    await manager.send_message(
-                        session_id,
-                        {
-                            "type": "pong",
-                            "timestamp": time.time(),
-                        },
-                    )
-
-                elif data.get("type") == "get_stats":
-                    # Send session statistics
-                    stats = pipeline.get_session_summary(session_id)
-                    await manager.send_message(
-                        session_id,
-                        {
-                            "type": "stats",
-                            "session_id": session_id,
-                            "data": stats,
-                            "timestamp": time.time(),
-                        },
-                    )
-
-                else:
-                    # Unknown message type
-                    await manager.send_message(
-                        session_id,
-                        {
-                            "type": "error",
-                            "message": f"Unknown message type: {data.get('type')}",
-                            "timestamp": time.time(),
-                        },
-                    )
-
-            except json.JSONDecodeError as e:
-                # Try to receive as text (maybe base64 frame directly)
+                        
+                        # Only log occasionally to avoid console spam
+                        if frames_processed % 30 == 0:
+                            print(f"[WS-INFO] Processed {frames_processed} frames. Last risk: {results.get('risk', {}).get('risk_score', 0):.1f}")
+                            
+                        await manager.send_message(session_id, response)
+            
+            elif "text" in message and message["text"]:
+                # SLOW PATH: Handle JSON control messages or legacy base64 frames
                 try:
-                    text_data = await websocket.receive_text()
-                    # Assume it's a base64-encoded frame
-                    result = await process_base64_frame(text_data, session_id)
+                    data = json.loads(message["text"])
+                    
+                    # Handle different message types
+                    if data.get("type") == "frame":
+                        # Legacy Base64 frame handling
+                        result = await process_frame_message(data, session_id)
 
-                    if result:
-                        frames_processed += 1
-                        await manager.send_message(
-                            session_id,
-                            {
+                        if result:
+                            frames_processed += 1
+                            manager.update_session_metadata(
+                                session_id, {"frames_processed": frames_processed}
+                            )
+
+                            response = {
                                 "type": "analysis",
                                 "session_id": session_id,
                                 **result,
+                            }
+                            await manager.send_message(session_id, response)
+
+                    elif data.get("type") == "ping":
+                        await manager.send_message(
+                            session_id,
+                            {
+                                "type": "pong",
+                                "timestamp": time.time(),
                             },
                         )
-                except Exception as text_error:
-                    print(f"[ERROR] Error processing text data: {text_error}")
-                    await manager.send_message(
-                        session_id,
-                        {
-                            "type": "error",
-                            "message": "Invalid frame format",
-                            "timestamp": time.time(),
-                        },
-                    )
+
+                    elif data.get("type") == "get_stats":
+                        stats = pipeline.get_session_summary(session_id)
+                        await manager.send_message(
+                            session_id,
+                            {
+                                "type": "stats",
+                                "session_id": session_id,
+                                "data": stats,
+                                "timestamp": time.time(),
+                            },
+                        )
+
+                    else:
+                        await manager.send_message(
+                            session_id,
+                            {
+                                "type": "error",
+                                "message": f"Unknown message type: {data.get('type')}",
+                                "timestamp": time.time(),
+                            },
+                        )
+
+                except json.JSONDecodeError:
+                    print("[ERROR] Invalid JSON received")
 
     except WebSocketDisconnect:
         print(f"[DISCONNECT] Client disconnected: {session_id}")

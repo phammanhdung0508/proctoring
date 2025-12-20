@@ -79,27 +79,53 @@ export class WebSocketClient {
   /**
    * Send a frame to the server for analysis
    */
-  sendFrame(frameData: string, timestamp?: number): void {
+  sendFrame(frameData: string | Blob, timestamp?: number): void {
     if (!this.isConnected()) {
-      console.warn('⚠️ Cannot send frame: WebSocket not connected', {
-        readyState: this.ws?.readyState,
-        expected: WebSocket.OPEN
-      });
+      // Limit warning logs to avoid console spam
+      if (Math.random() < 0.05) {
+        console.warn('⚠️ Cannot send frame: WebSocket not connected');
+      }
       return;
     }
 
-    const message: FrameMessage = {
-      type: 'frame',
-      data: frameData,
-      timestamp: timestamp || Date.now() / 1000,
-    };
+    if (frameData instanceof Blob) {
+      // FAST PATH: Send binary data directly
+      // This avoids Base64 encoding overhead
+      this.sendBinary(frameData);
+    } else {
+      // SLOW PATH: Legacy JSON/Base64
+      const message: FrameMessage = {
+        type: 'frame',
+        data: frameData,
+        timestamp: timestamp || Date.now() / 1000,
+      };
 
-    console.log('📤 Sending frame:', {
-      dataSize: frameData.length,
-      timestamp: message.timestamp
-    });
+      // Only log occasionally
+      if (Math.random() < 0.01) {
+        console.log('📤 Sending frame (JSON):', {
+          dataSize: frameData.length,
+          timestamp: message.timestamp
+        });
+      }
 
-    this.send(message);
+      this.send(message);
+    }
+  }
+
+  /**
+   * Send binary data to the server
+   */
+  private sendBinary(data: Blob): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    try {
+      this.ws.send(data);
+    } catch (error) {
+      console.error('❌ Error sending binary message:', error);
+      this.config.onError?.(error as Error);
+    }
   }
 
   /**

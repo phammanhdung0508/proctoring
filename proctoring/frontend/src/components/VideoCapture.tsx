@@ -118,7 +118,7 @@ export function VideoCapture({
 
         // Update FPS calculation
         fpsCalculator.current.addFrame();
-        setCurrentFPS(Math.round(fpsCalculator.current.getFPS()));
+        setCurrentFPS(fpsCalculator.current.getFPS());
       }
     }, intervalMs);
 
@@ -160,18 +160,29 @@ export function VideoCapture({
           </h3>
         </div>
         <div className="flex items-center gap-2 text-xs font-bold">
-          <div className="px-2 py-1 rounded-md bg-white/50 border border-white/60 text-slate-600">
-            {targetFPS} FPS TARGET
+          <div
+            className={`px-2 py-1 rounded-md transition-colors duration-300 ${isActive ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}
+            title={`Real-time frame processing rate (Target: ${targetFPS} FPS)`}
+          >
+            {isActive ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" />
+                {currentFPS.toFixed(1)} FPS
+                <span className="text-[10px] text-indigo-300 opacity-70">/ {targetFPS}</span>
+              </span>
+            ) : (
+              <span>{targetFPS} FPS TARGET</span>
+            )}
           </div>
           <div
-            className={`px-2 py-1 rounded-md border flex items-center gap-1.5 ${isActive
-              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+            className={`px-2 py-1 rounded-md border flex items-center gap-1.5 transition-all duration-500 ${isActive
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
               : 'bg-slate-100 text-slate-600 border-slate-200'
               }`}
             data-testid="monitoring-status-badge"
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`} />
-            {isActive ? 'LIVE' : 'PAUSED'}
+            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            {isActive ? 'LIVE FEED' : 'PAUSED'}
           </div>
         </div>
       </div>

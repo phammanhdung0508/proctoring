@@ -42,6 +42,7 @@ class ImagePreprocessor:
         gamma_value: float = 1.2,
         clahe_clip_limit: float = 2.0,
         clahe_tile_size: Tuple[int, int] = (8, 8),
+        target_resolution: Optional[Tuple[int, int]] = (640, 480),
     ):
         """
         Initialize the image preprocessor.
@@ -53,12 +54,14 @@ class ImagePreprocessor:
             gamma_value: Gamma value for correction (>1 brightens, <1 darkens)
             clahe_clip_limit: CLAHE clipping limit (higher = more contrast)
             clahe_tile_size: Grid size for CLAHE (smaller = more local adaptation)
+            target_resolution: Target resolution for resizing (width, height)
         """
         self.enable_clahe = enable_clahe
         self.enable_bilateral = enable_bilateral
         self.enable_gamma = enable_gamma
         self.gamma_value = gamma_value
-
+        self.target_resolution = target_resolution
+        
         # Initialize CLAHE
         # CLAHE improves detection in varying lighting conditions by:
         # - Normalizing brightness across the frame
@@ -80,6 +83,7 @@ class ImagePreprocessor:
         Apply all enabled preprocessing techniques to the frame.
 
         Processing pipeline:
+        0. Resize (optional) - Downscale for performance
         1. Gamma correction (optional) - Adjust overall exposure
         2. Bilateral filtering (optional) - Reduce noise while preserving edges
         3. CLAHE - Normalize lighting and enhance contrast
@@ -91,6 +95,11 @@ class ImagePreprocessor:
             Preprocessed frame in BGR format
         """
         preprocessed = frame.copy()
+
+        # Step 0: Resize (Optimization)
+        # Resizing early reduces the computational load for all subsequent steps
+        if self.target_resolution:
+            preprocessed = self._resize(preprocessed)
 
         # Step 1: Gamma correction (adjusts overall brightness/exposure)
         if self.enable_gamma and self.gamma_lut is not None:
@@ -113,6 +122,40 @@ class ImagePreprocessor:
             preprocessed = self._apply_clahe(preprocessed)
 
         return preprocessed
+
+    def _resize(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Resize frame to target resolution while maintaining aspect ratio.
+        
+        Args:
+            frame: Input frame
+            
+        Returns:
+            Resized frame
+        """
+        if not self.target_resolution:
+            return frame
+            
+        target_w, target_h = self.target_resolution
+        h, w = frame.shape[:2]
+        
+        # If frame is already smaller or equal, don't resize up
+        if w <= target_w and h <= target_h:
+            return frame
+            
+        # Calculate aspect ratio
+        aspect = w / h
+        
+        if aspect > 1:
+            # Landscape
+            new_w = target_w
+            new_h = int(target_w / aspect)
+        else:
+            # Portrait
+            new_h = target_h
+            new_w = int(target_h * aspect)
+            
+        return cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
     def _apply_clahe(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -391,10 +434,11 @@ class AdaptiveFrameSampler:
     def should_process_frame(
         self,
         frame: np.ndarray,
-        current_time: float
+        current_time: float,
+        last_processing_latency: float = 0.0
     ) -> Tuple[bool, Dict]:
         """
-        Determine if frame should be processed based on motion detection.
+        Determine if frame should be processed based on motion detection and system latency.
 
         Motion detection algorithm:
         1. Convert frame to grayscale
@@ -402,16 +446,14 @@ class AdaptiveFrameSampler:
         3. Compute mean absolute difference (motion score)
         4. Compare with threshold
         5. Adjust sampling rate based on motion level
-
-        Benefits:
-        - Reduces processing during static periods
-        - Maintains responsiveness during activity
-        - Balances performance and detection accuracy
-        - Adapts to different scenarios automatically
+        
+        Latency-aware skipping:
+        If system is overloaded, skip frames to allow queue to drain.
 
         Args:
             frame: Input frame in BGR format
             current_time: Current timestamp in seconds
+            last_processing_latency: Previous frame processing time in seconds
 
         Returns:
             Tuple of (should_process, motion_info)
@@ -438,6 +480,22 @@ class AdaptiveFrameSampler:
                 "reason": "first_frame",
                 "frame_number": self.frame_count,
                 "processed_count": self.processed_count,
+            }
+
+        # LATENCY CHECK:
+        # If the previous frame took too long to process, skip this one to recover.
+        time_since_last = current_time - self.last_process_time
+        
+        if last_processing_latency > 0 and time_since_last < (last_processing_latency * 0.8):
+             return False, {
+                "motion_score": 0.0,
+                "motion_detected": False,
+                "reason": "high_latency",
+                "frame_number": self.frame_count,
+                "processed_count": self.processed_count,
+                "skip_ratio": 1.0 - (self.processed_count / self.frame_count),
+                "time_since_last": time_since_last,
+                "latency": last_processing_latency
             }
 
         # Calculate frame difference (motion detection)

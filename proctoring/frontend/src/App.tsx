@@ -4,21 +4,24 @@
  * Proctoring Dashboard - integrates all components
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { VideoCapture } from './components/VideoCapture';
 import { AlertPanel } from './components/AlertPanel';
 import { StatsDashboard } from './components/StatsDashboard';
 import { createWebSocketClient } from './services/websocket';
 import { useProctoringStore } from './stores/proctoringStore';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import type { AnalysisMessage } from './types';
 
 // Configuration
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
 const DEFAULT_SESSION_ID = `session-${Date.now()}`;
 
-function App() {
+function Dashboard() {
   const [sessionId] = useState(DEFAULT_SESSION_ID);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const { showToast } = useToast();
+  const connectedRef = useRef(false); // Track previous connection state
 
   const {
     session,
@@ -40,7 +43,7 @@ function App() {
         setConnected(true);
       },
       onAnalysis: (message: AnalysisMessage) => {
-        console.log('📊 Analysis received:', message);
+        // console.log('📊 Analysis received:', message); // Reduced spam
         updateAnalysis({
           gaze: message.gaze,
           objects: message.objects,
@@ -51,6 +54,8 @@ function App() {
       },
       onError: (error: Error) => {
         console.error('❌ WebSocket error:', error);
+        // We can't use showToast here directly because this runs in closure
+        // But we could use a global event bus or just rely on state changes
       },
       onDisconnected: () => {
         console.log('🔌 WebSocket disconnected');
@@ -60,6 +65,16 @@ function App() {
       maxReconnectAttempts: 5,
     });
   });
+
+  // Watch for connection changes to show toasts
+  useEffect(() => {
+    if (isConnected && !connectedRef.current) {
+      showToast('System Connected Successfully', 'success');
+    } else if (!isConnected && connectedRef.current) {
+      showToast('Connection Lost - Retrying...', 'warning');
+    }
+    connectedRef.current = isConnected;
+  }, [isConnected, showToast]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -78,6 +93,7 @@ function App() {
     // Start session in store
     startSession(sessionId);
     setIsMonitoring(true);
+    showToast('Monitoring Started', 'info');
   };
 
   // Handle stop monitoring
@@ -90,18 +106,20 @@ function App() {
     // End session in store
     endSession();
     setIsMonitoring(false);
+    showToast('Monitoring Stopped', 'info');
   };
 
   // Handle reset
   const handleReset = () => {
     handleStopMonitoring();
     reset();
+    showToast('Session Reset', 'info');
   };
 
   const riskScore = session?.current_risk_score ?? 0;
   const maxRiskScore = session?.max_risk_score ?? 0;
   const totalFrames = session?.total_frames ?? 0;
-  // Removed unused totalViolations
+
   const sessionDurationMinutes = session && session.started_at
     ? Math.max(0, Math.floor((Date.now() - session.started_at) / 60000))
     : 0;
@@ -282,5 +300,12 @@ function App() {
   );
 }
 
-export default App;
+function App() {
+  return (
+    <ToastProvider>
+      <Dashboard />
+    </ToastProvider>
+  );
+}
 
+export default App;

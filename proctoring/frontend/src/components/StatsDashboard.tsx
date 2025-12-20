@@ -139,7 +139,7 @@ export function StatsDashboard() {
 
       {/* Latest Analysis Details */}
       {latestAnalysis && (
-        <div className="glass p-6 rounded-2xl shadow-sm" data-testid="latest-analysis">
+        <div className="glass p-6 rounded-2xl shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="latest-analysis">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900">
@@ -230,7 +230,7 @@ export function StatsDashboard() {
                   </div>
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${latestAnalysis.behavior.pattern_score > 50 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                      className={`h-full rounded-full transition-all duration-500 ease-out ${latestAnalysis.behavior.pattern_score > 50 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                       style={{ width: `${Math.min(latestAnalysis.behavior.pattern_score, 100)}%` }}
                     />
                   </div>
