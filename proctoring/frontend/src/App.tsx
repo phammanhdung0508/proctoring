@@ -14,6 +14,7 @@ import type { AnalysisMessage } from './types';
 
 // Configuration
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const DEFAULT_SESSION_ID = `session-${Date.now()}`;
 
 function App() {
@@ -26,6 +27,8 @@ function App() {
     startSession,
     endSession,
     setConnected,
+    setPipelineInfo,
+    pipelineInfo,
     updateAnalysis,
     reset,
   } = useProctoringStore();
@@ -67,6 +70,27 @@ function App() {
       wsClient?.disconnect();
     };
   }, [wsClient]);
+
+  useEffect(() => {
+    if (!isConnected || pipelineInfo) {
+      return;
+    }
+
+    const fetchPipelineInfo = async () => {
+      try {
+        const response = await fetch(`${API_URL}/ws/pipeline/info`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch pipeline info: ${response.status}`);
+        }
+        const data = await response.json();
+        setPipelineInfo(data.pipeline ?? null);
+      } catch (error) {
+        console.error('❌ Failed to load pipeline info:', error);
+      }
+    };
+
+    void fetchPipelineInfo();
+  }, [isConnected, pipelineInfo, setPipelineInfo]);
 
   // Handle start monitoring
   const handleStartMonitoring = () => {
@@ -283,4 +307,3 @@ function App() {
 }
 
 export default App;
-

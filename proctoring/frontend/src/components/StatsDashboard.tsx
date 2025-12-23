@@ -9,7 +9,7 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, A
 import { useProctoringStore } from '../stores/proctoringStore';
 
 export function StatsDashboard() {
-  const { session, latestAnalysis, analysisHistory, avgProcessingTime } =
+  const { session, latestAnalysis, analysisHistory, avgProcessingTime, pipelineInfo } =
     useProctoringStore();
 
   // Prepare chart data from history
@@ -134,6 +134,67 @@ export function StatsDashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Model Status */}
+        <div className="glass p-6 rounded-2xl shadow-sm space-y-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Model Status</p>
+            <h3 className="text-lg font-bold text-slate-900">Detection Config</h3>
+          </div>
+
+          {pipelineInfo ? (
+            <div className="space-y-4 text-sm text-slate-600">
+              <div className="p-4 rounded-xl bg-white/50 border border-white/60">
+                <p className="text-xs text-slate-500 mb-2">YOLO Model</p>
+                <div className="text-base font-semibold text-slate-900">
+                  {pipelineInfo.detectors.objects.model_name}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2 py-1">
+                    <span>Confidence</span>
+                    <span className="font-mono text-slate-700">
+                      {(pipelineInfo.detectors.objects.confidence_threshold * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2 py-1">
+                    <span>Person</span>
+                    <span className="font-mono text-slate-700">
+                      {(pipelineInfo.detectors.objects.person_confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/50 border border-white/60">
+                <p className="text-xs text-slate-500 mb-2">Gaze Thresholds</p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2 py-1">
+                    <span>Deviation</span>
+                    <span className="font-mono text-slate-700">
+                      {pipelineInfo.detectors.gaze.thresholds.deviation_duration}s
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2 py-1">
+                    <span>Extended</span>
+                    <span className="font-mono text-slate-700">
+                      {pipelineInfo.detectors.gaze.thresholds.extended_duration}s
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-slate-50 rounded-lg px-2 py-1">
+                    <span>Critical</span>
+                    <span className="font-mono text-slate-700">
+                      {pipelineInfo.detectors.gaze.thresholds.critical_duration}s
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-400 bg-slate-50/60 rounded-xl border border-dashed border-slate-200 p-4">
+              Waiting for model configuration...
+            </div>
+          )}
         </div>
       </div>
 
