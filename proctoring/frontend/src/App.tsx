@@ -19,6 +19,7 @@ const DEFAULT_SESSION_ID = `session-${Date.now()}`;
 function App() {
   const [sessionId] = useState(DEFAULT_SESSION_ID);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(true);
 
   const {
     session,
@@ -213,6 +214,15 @@ function App() {
                 <p className="text-sm text-slate-500">Manage video feed and detection analysis</p>
               </div>
               <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={showDebugOverlay}
+                    onChange={(event) => setShowDebugOverlay(event.target.checked)}
+                  />
+                  Show Debug Overlay
+                </label>
                 {!isMonitoring ? (
                   <button
                     onClick={handleStartMonitoring}
@@ -247,6 +257,7 @@ function App() {
               wsClient={wsClient}
               isActive={isMonitoring && isConnected}
               targetFPS={5}
+              showDebugOverlay={showDebugOverlay}
             />
 
             <StatsDashboard />
@@ -283,4 +294,3 @@ function App() {
 }
 
 export default App;
-
