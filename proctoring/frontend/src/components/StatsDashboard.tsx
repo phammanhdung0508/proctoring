@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { useProctoringStore } from '../stores/proctoringStore';
+import { PipelineTimeline } from './PipelineTimeline';
 
 export function StatsDashboard() {
   const { session, latestAnalysis, analysisHistory, avgProcessingTime } =
@@ -136,6 +137,8 @@ export function StatsDashboard() {
           </div>
         </div>
       </div>
+
+      <PipelineTimeline metadata={latestAnalysis?.metadata} />
 
       {/* Latest Analysis Details */}
       {latestAnalysis && (

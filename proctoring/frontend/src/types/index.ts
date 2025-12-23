@@ -67,6 +67,8 @@ export interface RiskResults {
 export interface AnalysisMetadata {
   session_id: string;
   timestamp: number;
+  preprocessing_time_ms?: number;
+  detection_time_ms?: number;
   processing_time_ms: number;
   avg_processing_time_ms: number;
   frame_within_timeout: boolean;
