@@ -12,18 +12,22 @@ import {
   FrameRateCalculator,
 } from '../utils/videoUtils';
 import type { WebSocketClient } from '../services/websocket';
+import { useProctoringStore } from '../stores/proctoringStore';
 
 interface VideoCaptureProps {
   wsClient: WebSocketClient | null;
   isActive: boolean;
   targetFPS?: number;
+  showPreprocessing?: boolean;
 }
 
 export function VideoCapture({
   wsClient,
   isActive,
   targetFPS = 5,
+  showPreprocessing = false,
 }: VideoCaptureProps) {
+  const latestAnalysis = useProctoringStore((state) => state.latestAnalysis);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<number | null>(null);
@@ -33,6 +37,9 @@ export function VideoCapture({
   const [isReady, setIsReady] = useState(false);
   const [currentFPS, setCurrentFPS] = useState(0);
   const [framesSent, setFramesSent] = useState(0);
+  const processedThumbnail =
+    latestAnalysis?.metadata?.preprocessing?.thumbnail_base64;
+  const showProcessedPanel = showPreprocessing;
 
   // Initialize camera
   useEffect(() => {
@@ -151,6 +158,81 @@ export function VideoCapture({
     );
   }
 
+  const RawFeed = (
+    <div className="relative bg-black aspect-video overflow-hidden group rounded-xl">
+      {/* Placeholder / Empty State styling */}
+      <div className="absolute inset-0 z-0">
+        {!isReady && (
+          <div className="w-full h-full flex flex-col items-center justify-center text-white/50 space-y-3">
+            <div className="w-12 h-12 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+            <p className="text-sm font-medium tracking-wide">Initializing Camera...</p>
+          </div>
+        )}
+      </div>
+
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        data-testid="video-element"
+        className={`w-full h-full object-cover relative z-10 transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        onLoadedMetadata={() => setIsReady(true)}
+      />
+
+      {/* Overlay Grid (Cyberpunk-ish) */}
+      <div className="absolute inset-0 z-20 pointer-events-none opacity-20 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:50px_50px]" />
+
+      {/* Recording Indicator */}
+      {isActive && (
+        <div className="absolute inset-0 z-20 pointer-events-none border-[3px] border-rose-500/30 animate-pulse" />
+      )}
+
+      {/* Floating Stats */}
+      <div className="absolute bottom-4 left-4 right-4 z-30 flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="bg-black/60 backdrop-blur-md rounded-lg p-2 text-white/90 text-xs font-mono space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-white/50">RES:</span>
+            <span>{videoRef.current?.videoWidth}x{videoRef.current?.videoHeight}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-white/50">FPS:</span>
+            <span data-testid="current-fps">{currentFPS}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-white/50">Sent:</span>
+            <span data-testid="frames-sent">{framesSent}</span>
+          </div>
+        </div>
+
+        {isActive && (
+          <div className="bg-rose-500/90 backdrop-blur text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse flex items-center gap-2">
+            <span className="w-2 h-2 bg-white rounded-full" />
+            REC
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const ProcessedFeed = (
+    <div className="relative bg-slate-950 aspect-video overflow-hidden rounded-xl border border-white/10">
+      {processedThumbnail ? (
+        <img
+          src={`data:image/jpeg;base64,${processedThumbnail}`}
+          alt="Processed preview"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 space-y-2">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
+          <p className="text-xs font-semibold tracking-wide uppercase">Waiting for processed frame</p>
+          <p className="text-[11px] text-white/40">Enable DEBUG on backend to stream thumbnails.</p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="glass rounded-2xl overflow-hidden" data-testid="video-capture-container">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/50">
@@ -158,6 +240,9 @@ export function VideoCapture({
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
             <span className="text-lg">📹</span> Live Feed
           </h3>
+          {showProcessedPanel && (
+            <p className="text-xs text-slate-500 mt-1">Raw vs. processed preview</p>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs font-bold">
           <div className="px-2 py-1 rounded-md bg-white/50 border border-white/60 text-slate-600">
@@ -176,63 +261,20 @@ export function VideoCapture({
         </div>
       </div>
 
-      {/* Video Feed */}
-      <div className="relative bg-black aspect-video overflow-hidden group">
-
-        {/* Placeholder / Empty State styling */}
-        <div className="absolute inset-0 z-0">
-          {!isReady && (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white/50 space-y-3">
-              <div className="w-12 h-12 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
-              <p className="text-sm font-medium tracking-wide">Initializing Camera...</p>
-            </div>
+      <div className={`p-5 ${showProcessedPanel ? 'grid grid-cols-1 lg:grid-cols-2 gap-5' : ''}`}>
+        <div className="space-y-2">
+          {showProcessedPanel && (
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Raw</div>
           )}
+          {RawFeed}
         </div>
-
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          data-testid="video-element"
-          className={`w-full h-full object-cover relative z-10 transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-          onLoadedMetadata={() => setIsReady(true)}
-        />
-
-        {/* Overlay Grid (Cyberpunk-ish) */}
-        <div className="absolute inset-0 z-20 pointer-events-none opacity-20 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:50px_50px]" />
-
-        {/* Recording Indicator */}
-        {isActive && (
-          <div className="absolute inset-0 z-20 pointer-events-none border-[3px] border-rose-500/30 animate-pulse" />
-        )}
-
-        {/* Floating Stats */}
-        <div className="absolute bottom-4 left-4 right-4 z-30 flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="bg-black/60 backdrop-blur-md rounded-lg p-2 text-white/90 text-xs font-mono space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-white/50">RES:</span>
-              <span>{videoRef.current?.videoWidth}x{videoRef.current?.videoHeight}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-white/50">FPS:</span>
-              <span data-testid="current-fps">{currentFPS}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-white/50">Sent:</span>
-              <span data-testid="frames-sent">{framesSent}</span>
-            </div>
+        {showProcessedPanel && (
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Processed</div>
+            {ProcessedFeed}
           </div>
-
-          {isActive && (
-            <div className="bg-rose-500/90 backdrop-blur text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse flex items-center gap-2">
-              <span className="w-2 h-2 bg-white rounded-full" />
-              REC
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
 }
-
