@@ -68,8 +68,19 @@ export interface AnalysisMetadata {
   session_id: string;
   timestamp: number;
   processing_time_ms: number;
+  preprocessing_time_ms?: number;
+  detection_time_ms?: number;
   avg_processing_time_ms: number;
+  avg_preprocessing_time_ms?: number;
   frame_within_timeout: boolean;
+  frame_skipped?: boolean;
+  preprocessing?: {
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+    roi?: Record<string, unknown>;
+    sampling?: Record<string, unknown>;
+    thumbnail_base64?: string;
+  };
   error?: string;
 }
 

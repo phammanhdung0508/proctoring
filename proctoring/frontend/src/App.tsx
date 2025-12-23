@@ -19,6 +19,7 @@ const DEFAULT_SESSION_ID = `session-${Date.now()}`;
 function App() {
   const [sessionId] = useState(DEFAULT_SESSION_ID);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [showPreprocessing, setShowPreprocessing] = useState(false);
 
   const {
     session,
@@ -212,7 +213,20 @@ function App() {
                 <h2 className="text-lg font-bold text-slate-900">Live Session Control</h2>
                 <p className="text-sm text-slate-500">Manage video feed and detection analysis</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <label
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white/70 text-sm font-semibold text-slate-700 shadow-sm hover:shadow transition-all"
+                  htmlFor="toggle-preprocessing"
+                >
+                  <input
+                    id="toggle-preprocessing"
+                    type="checkbox"
+                    className="h-4 w-4 accent-slate-900"
+                    checked={showPreprocessing}
+                    onChange={(event) => setShowPreprocessing(event.target.checked)}
+                  />
+                  Show Preprocessing
+                </label>
                 {!isMonitoring ? (
                   <button
                     onClick={handleStartMonitoring}
@@ -247,6 +261,7 @@ function App() {
               wsClient={wsClient}
               isActive={isMonitoring && isConnected}
               targetFPS={5}
+              showPreprocessing={showPreprocessing}
             />
 
             <StatsDashboard />
@@ -283,4 +298,3 @@ function App() {
 }
 
 export default App;
-

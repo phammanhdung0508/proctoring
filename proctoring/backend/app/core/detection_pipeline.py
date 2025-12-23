@@ -8,9 +8,11 @@ Technology: Async/await with concurrent processing
 """
 
 import asyncio
+import base64
 import time
 from typing import Dict, Optional
 
+import cv2
 import numpy as np
 
 from app.config import settings
@@ -160,6 +162,10 @@ class DetectionPipeline:
             else:
                 processed_frame = frame
 
+            processed_thumbnail = None
+            if settings.DEBUG:
+                processed_thumbnail = self._encode_thumbnail(processed_frame)
+
             # Phase 1 Optimization: ROI Extraction (optional)
             # Extract region of interest for focused processing
             roi_frame, roi_info = self.roi_extractor.extract_roi(processed_frame)
@@ -212,6 +218,15 @@ class DetectionPipeline:
                 self._processing_times.pop(0)
 
             # Construct final results with preprocessing info
+            preprocessing_metadata = {
+                "enabled": self.enable_preprocessing,
+                "config": self.preprocessor.get_config(),
+                "roi": roi_info,
+                "sampling": sampling_info,
+            }
+            if processed_thumbnail:
+                preprocessing_metadata["thumbnail_base64"] = processed_thumbnail
+
             results = {
                 "gaze": gaze_results,
                 "objects": object_results,
@@ -226,12 +241,7 @@ class DetectionPipeline:
                     "avg_processing_time_ms": self._get_avg_processing_time(),
                     "avg_preprocessing_time_ms": self._get_avg_preprocessing_time(),
                     "frame_within_timeout": processing_time < settings.FRAME_PROCESSING_TIMEOUT,
-                    "preprocessing": {
-                        "enabled": self.enable_preprocessing,
-                        "config": self.preprocessor.get_config(),
-                        "roi": roi_info,
-                        "sampling": sampling_info,
-                    },
+                    "preprocessing": preprocessing_metadata,
                     "performance": {
                         "total_frames": self.frame_sampler.frame_count if self.enable_adaptive_sampling else 0,
                         "processed_frames": self.frame_sampler.processed_count if self.enable_adaptive_sampling else 0,
@@ -508,3 +518,46 @@ class DetectionPipeline:
                 "error": error_message,
             },
         }
+
+    @staticmethod
+    def _encode_thumbnail(
+        frame: np.ndarray,
+        max_width: int = 320,
+        jpeg_quality: int = 70,
+    ) -> Optional[str]:
+        """
+        Encode a downscaled frame as a base64 JPEG thumbnail.
+
+        Args:
+            frame: Frame in BGR format.
+            max_width: Maximum width for the thumbnail.
+            jpeg_quality: JPEG quality (0-100).
+
+        Returns:
+            Base64 string without data URI prefix, or None on failure.
+        """
+        if frame is None:
+            return None
+
+        height, width = frame.shape[:2]
+        if width == 0 or height == 0:
+            return None
+
+        scale = min(1.0, max_width / float(width))
+        target_width = max(1, int(width * scale))
+        target_height = max(1, int(height * scale))
+
+        if scale < 1.0:
+            resized = cv2.resize(frame, (target_width, target_height))
+        else:
+            resized = frame
+
+        success, buffer = cv2.imencode(
+            ".jpg",
+            resized,
+            [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality],
+        )
+        if not success:
+            return None
+
+        return base64.b64encode(buffer).decode("utf-8")
