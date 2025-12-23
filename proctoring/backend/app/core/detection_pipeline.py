@@ -329,7 +329,14 @@ class DetectionPipeline:
         """
         return {
             "detectors": {
-                "gaze": "MediaPipe Face Mesh + PnP",
+                "gaze": {
+                    "model": "MediaPipe Face Mesh + PnP",
+                    "thresholds": {
+                        "deviation_duration": settings.GAZE_DEVIATION_DURATION,
+                        "extended_duration": settings.GAZE_EXTENDED_DURATION,
+                        "critical_duration": settings.GAZE_CRITICAL_DURATION,
+                    },
+                },
                 "objects": self.object_detector.get_model_info(),
                 "behavior": {
                     "window_size": self.behavior_analyzer.window_size,

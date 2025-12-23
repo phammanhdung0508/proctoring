@@ -140,6 +140,43 @@ export interface SessionStats {
   };
 }
 
+export interface PipelineInfo {
+  detectors: {
+    gaze: {
+      model: string;
+      thresholds: {
+        deviation_duration: number;
+        extended_duration: number;
+        critical_duration: number;
+      };
+    };
+    objects: {
+      model_type: string;
+      model_path_configured: string;
+      model_path_actual: string;
+      model_name: string;
+      confidence_threshold: number;
+      person_confidence: number;
+      forbidden_classes: string[];
+    };
+    behavior: {
+      window_size: number;
+      active_sessions: number;
+    };
+  };
+  risk_scorer: {
+    secondary_person_weight: number;
+    forbidden_object_weight: number;
+    gaze_deviation_weight: number;
+    multiple_violations_multiplier: number;
+  };
+  performance: {
+    avg_processing_time_ms: number;
+    target_fps: number;
+    timeout_ms: number;
+  };
+}
+
 // Alert configuration
 export interface Alert {
   id: string;

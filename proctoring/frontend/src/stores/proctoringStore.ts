@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import type {
   AnalysisResults,
   Alert,
+  PipelineInfo,
   ProctoringSession,
 } from '../types';
 
@@ -27,11 +28,13 @@ interface ProctoringState {
   // Performance metrics
   avgProcessingTime: number;
   frameCount: number;
+  pipelineInfo: PipelineInfo | null;
 
   // Actions
   startSession: (sessionId: string) => void;
   endSession: () => void;
   setConnected: (connected: boolean) => void;
+  setPipelineInfo: (info: PipelineInfo | null) => void;
   updateAnalysis: (analysis: AnalysisResults) => void;
   addAlert: (alert: Alert) => void;
   acknowledgeAlert: (alertId: string) => void;
@@ -60,6 +63,7 @@ export const useProctoringStore = create<ProctoringState>((set) => ({
   unacknowledgedAlerts: 0,
   avgProcessingTime: 0,
   frameCount: 0,
+  pipelineInfo: null,
 
   // Start a new proctoring session
   startSession: (sessionId: string) => {
@@ -90,6 +94,10 @@ export const useProctoringStore = create<ProctoringState>((set) => ({
   // Set connection status
   setConnected: (connected: boolean) => {
     set({ isConnected: connected });
+  },
+
+  setPipelineInfo: (info: PipelineInfo | null) => {
+    set({ pipelineInfo: info });
   },
 
   // Update with new analysis results
@@ -202,6 +210,7 @@ export const useProctoringStore = create<ProctoringState>((set) => ({
       unacknowledgedAlerts: 0,
       avgProcessingTime: 0,
       frameCount: 0,
+      pipelineInfo: null,
     });
   },
 }));
