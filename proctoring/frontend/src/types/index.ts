@@ -60,6 +60,7 @@ export interface RiskResults {
     multiplier_applied: boolean;
     person_count: number;
     forbidden_items_count: number;
+    pattern_score?: number;
   };
 }
 
@@ -148,6 +149,12 @@ export interface Alert {
   message: string;
   violations: string[];
   risk_score: number;
+  details: {
+    gaze_deviation_duration: number;
+    forbidden_item_confidence: number;
+    person_count: number;
+    pattern_score: number;
+  };
   acknowledged: boolean;
 }
 

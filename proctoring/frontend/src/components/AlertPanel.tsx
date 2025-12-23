@@ -126,6 +126,29 @@ export function AlertPanel() {
                     </ul>
                   )}
 
+                  <ul className="mt-2 space-y-1 text-[11px] text-slate-600">
+                    <li className="flex items-start">
+                      <span className="mr-1.5 text-slate-400">•</span>
+                      <span>
+                        Gaze deviation duration: {alert.details.gaze_deviation_duration.toFixed(2)}
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-1.5 text-slate-400">•</span>
+                      <span>
+                        Forbidden item confidence: {alert.details.forbidden_item_confidence.toFixed(2)}
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-1.5 text-slate-400">•</span>
+                      <span>Person count: {alert.details.person_count}</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-1.5 text-slate-400">•</span>
+                      <span>Pattern score: {alert.details.pattern_score.toFixed(2)}</span>
+                    </li>
+                  </ul>
+
                   <div className="mt-3 flex items-center justify-between">
                     {/* Risk Score Pill */}
                     <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${alert.risk_score >= 70 ? 'bg-rose-100 text-rose-700 border-rose-200' :

@@ -132,6 +132,10 @@ export const useProctoringStore = create<ProctoringState>((set) => ({
         analysis.risk.alert_level === 'high' ||
         analysis.risk.alert_level === 'critical'
       ) {
+        const maxForbiddenItemConfidence = analysis.objects.forbidden_items.reduce(
+          (max, item) => Math.max(max, item.confidence),
+          0
+        );
         const alert: Alert = {
           id: `alert-${Date.now()}-${Math.random()}`,
           timestamp: analysis.metadata.timestamp,
@@ -139,6 +143,12 @@ export const useProctoringStore = create<ProctoringState>((set) => ({
           message: analysis.risk.violations.join(', '),
           violations: analysis.risk.violations,
           risk_score: analysis.risk.risk_score,
+          details: {
+            gaze_deviation_duration: analysis.gaze.deviation_duration,
+            forbidden_item_confidence: maxForbiddenItemConfidence,
+            person_count: analysis.risk.details.person_count,
+            pattern_score: analysis.risk.details.pattern_score ?? 0,
+          },
           acknowledged: false,
         };
 
